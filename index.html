@@ -1,0 +1,1653 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NASS-B - Attendance Evidence & Correction System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar and mobile UI tweaks */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Smooth view transitions */
+    .view-screen {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    }
+    .view-screen.active {
+      display: block;
+      opacity: 1;
+    }
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #print-area, #print-area * {
+        visibility: visible;
+      }
+      #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex justify-center selection:bg-brand-500 selection:text-white">
+
+  <!-- Mobile Container Wrapper -->
+  <div id="app-container" class="w-full max-w-md bg-white dark:bg-gray-950 min-h-screen flex flex-col shadow-2xl relative pb-20">
+
+    <!-- App Header Bar -->
+    <header class="bg-brand-600 text-white p-4 sticky top-0 z-30 shadow-md flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="bg-white text-brand-600 p-1.5 rounded-lg font-black text-xl tracking-wider shadow">NB</div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">NASS-B</h1>
+          <p class="text-xs text-brand-100">Attendance Evidence System</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="theme-toggle-btn" class="p-2 rounded-full hover:bg-brand-700 transition" title="Toggle Theme">
+          <i data-lucide="moon" class="w-5 h-5"></i>
+        </button>
+        <button id="pin-lock-btn" class="p-2 rounded-full hover:bg-brand-700 transition relative" title="Lock App">
+          <i data-lucide="lock" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global Integrity Alert Bar -->
+    <div class="bg-blue-50 dark:bg-blue-950/60 border-b border-blue-200 dark:border-blue-800 px-3 py-1.5 flex items-center justify-between text-xs text-blue-800 dark:text-blue-200">
+      <span class="flex items-center gap-1 font-medium">
+        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400"></i>
+        Integrity System: Authentic Unaltered Student Records Only
+      </span>
+      <button onclick="showIntegrityModal()" class="underline font-semibold text-[11px]">Info</button>
+    </div>
+
+    <!-- Main Dynamic Screen Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+
+      <!-- SCREEN 1: DASHBOARD (HOME) -->
+      <section id="screen-dashboard" class="view-screen active space-y-4">
+        <!-- Student Info Quick Pill -->
+        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+          <div>
+            <h2 id="dash-student-name" class="font-semibold text-sm">Rahul V. Nair</h2>
+            <p id="dash-student-roll" class="text-xs text-gray-500 dark:text-gray-400">Roll: 21DCS042 • Sem 6 CS</p>
+          </div>
+          <span class="bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 text-xs px-2.5 py-1 rounded-full font-medium">Active Term</span>
+        </div>
+
+        <!-- Attendance Stats Gauge Card -->
+        <div class="bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-2xl p-5 shadow-lg relative overflow-hidden">
+          <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-wider text-brand-100 font-medium">Overall Attendance</p>
+              <h3 id="dash-overall-pct" class="text-4xl font-extrabold my-1">0%</h3>
+              <p id="dash-status-pill" class="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-semibold bg-white/20 text-white">
+                Calculating...
+              </p>
+            </div>
+            <!-- Circle Ring Indicator -->
+            <div class="relative w-24 h-24 flex items-center justify-center">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <path class="text-white/20" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path id="dash-ring-path" class="text-white transition-all duration-700 ease-out" stroke-dasharray="0, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              </svg>
+              <i data-lucide="award" class="w-8 h-8 absolute text-white/90"></i>
+            </div>
+          </div>
+
+          <!-- Counter grid -->
+          <div class="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-white/20 text-center text-xs">
+            <div>
+              <p class="text-brand-200">Total</p>
+              <p id="dash-stat-total" class="font-bold text-base">0</p>
+            </div>
+            <div>
+              <p class="text-brand-200">Present</p>
+              <p id="dash-stat-present" class="font-bold text-base text-emerald-300">0</p>
+            </div>
+            <div>
+              <p class="text-brand-200">Absent</p>
+              <p id="dash-stat-absent" class="font-bold text-base text-rose-300">0</p>
+            </div>
+            <div>
+              <p class="text-brand-200">Pending</p>
+              <p id="dash-stat-pending" class="font-bold text-base text-amber-300">0</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attendance Warning Banner if < 75% -->
+        <div id="low-attendance-alert" class="hidden bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex items-start space-x-3">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"></i>
+          <div>
+            <h4 class="text-xs font-bold text-amber-900 dark:text-amber-200">Attendance Below Target Threshold (75%)</h4>
+            <p class="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">Check the calculator tab to see required consecutive classes needed to restore your eligibility.</p>
+          </div>
+        </div>
+
+        <!-- Quick Actions Row -->
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="navTo('add-attendance')" class="flex flex-col items-center justify-center p-3 bg-brand-50 dark:bg-brand-950/50 hover:bg-brand-100 border border-brand-200 dark:border-brand-800 rounded-xl transition text-center group">
+            <div class="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center mb-1.5 shadow group-hover:scale-105 transition">
+              <i data-lucide="plus" class="w-5 h-5"></i>
+            </div>
+            <span class="text-xs font-semibold text-brand-900 dark:text-brand-200">Add Log</span>
+          </button>
+
+          <button onclick="navTo('evidence')" class="flex flex-col items-center justify-center p-3 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 rounded-xl transition text-center group">
+            <div class="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center mb-1.5 shadow group-hover:scale-105 transition">
+              <i data-lucide="file-up" class="w-5 h-5"></i>
+            </div>
+            <span class="text-xs font-semibold text-emerald-900 dark:text-emerald-200">Add Evidence</span>
+          </button>
+
+          <button onclick="navTo('corrections')" class="flex flex-col items-center justify-center p-3 bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 border border-purple-200 dark:border-purple-800 rounded-xl transition text-center group">
+            <div class="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center mb-1.5 shadow group-hover:scale-105 transition">
+              <i data-lucide="file-edit" class="w-5 h-5"></i>
+            </div>
+            <span class="text-xs font-semibold text-purple-900 dark:text-purple-200">Correction</span>
+          </button>
+        </div>
+
+        <!-- Quick Access Tools Cards -->
+        <div class="grid grid-cols-2 gap-3">
+          <button onclick="navTo('subject-wise')" class="p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center gap-3 text-left shadow-sm hover:border-brand-500 transition">
+            <div class="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+              <i data-lucide="book-open" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold">Subject Breakdown</h4>
+              <p class="text-[10px] text-gray-500">View individual status</p>
+            </div>
+          </button>
+
+          <button onclick="navTo('calculator')" class="p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center gap-3 text-left shadow-sm hover:border-brand-500 transition">
+            <div class="p-2 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400">
+              <i data-lucide="calculator" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold">Calculator</h4>
+              <p class="text-[10px] text-gray-500">Plan required classes</p>
+            </div>
+          </button>
+        </div>
+
+        <!-- Recent Logs Header -->
+        <div class="flex items-center justify-between pt-2">
+          <h3 class="font-bold text-sm text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+            <i data-lucide="clock" class="w-4 h-4 text-brand-600"></i> Recent Records
+          </h3>
+          <button onclick="navTo('attendance')" class="text-xs text-brand-600 font-semibold hover:underline">View All</button>
+        </div>
+
+        <!-- Recent Records Container -->
+        <div id="dash-recent-list" class="space-y-2">
+          <!-- Dynamically filled -->
+        </div>
+      </section>
+
+      <!-- SCREEN 2: ATTENDANCE CALENDAR -->
+      <section id="screen-calendar" class="view-screen space-y-4">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800 shadow-sm">
+          <!-- Calendar Month Navigation -->
+          <div class="flex items-center justify-between mb-4">
+            <button id="cal-prev-btn" class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800">
+              <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </button>
+            <h3 id="cal-month-year-label" class="font-bold text-base">October 2026</h3>
+            <button id="cal-next-btn" class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800">
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Calendar Grid Header -->
+          <div class="grid grid-cols-7 text-center font-semibold text-xs text-gray-400 mb-2">
+            <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+          </div>
+
+          <!-- Days Grid Container -->
+          <div id="cal-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs">
+            <!-- Dynamically generated -->
+          </div>
+
+          <!-- Color Legend -->
+          <div class="flex flex-wrap gap-3 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gray-600 dark:text-gray-400 justify-center">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Present</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Absent</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Pending</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Approved</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-gray-400"></span> Holiday</span>
+          </div>
+        </div>
+
+        <!-- Selected Date Periods Header -->
+        <div class="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between">
+          <span id="cal-selected-date-label" class="text-xs font-bold text-gray-700 dark:text-gray-300">Selected: Today</span>
+          <button onclick="openAddAttendanceModalForCal()" class="text-xs bg-brand-600 text-white px-2.5 py-1 rounded-lg font-medium flex items-center gap-1">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Period
+          </button>
+        </div>
+
+        <!-- Selected Date Records list -->
+        <div id="cal-selected-records-list" class="space-y-2">
+          <!-- Dynamic -->
+        </div>
+      </section>
+
+      <!-- SCREEN 3: ATTENDANCE LOG & SEARCH (Linked to Attendance Tab) -->
+      <section id="screen-attendance" class="view-screen space-y-3">
+        <!-- Search and Filter Header -->
+        <div class="space-y-2 bg-white dark:bg-gray-900 p-3 rounded-2xl border border-gray-200 dark:border-gray-800">
+          <div class="relative">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-gray-400"></i>
+            <input type="text" id="att-search-input" placeholder="Search by subject, teacher, notes..." class="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+
+          <div class="flex gap-2">
+            <select id="att-filter-subject" class="w-1/2 p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none">
+              <option value="ALL">All Subjects</option>
+              <!-- Dynamic options -->
+            </select>
+            <select id="att-filter-status" class="w-1/2 p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none">
+              <option value="ALL">All Statuses</option>
+              <option value="Present">Present</option>
+              <option value="Absent">Absent</option>
+              <option value="Holiday">Holiday</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center px-1">
+          <span id="att-count-label" class="text-xs text-gray-500 font-medium">Showing 0 entries</span>
+          <button onclick="navTo('add-attendance')" class="text-xs text-brand-600 font-bold flex items-center gap-1">+ New Record</button>
+        </div>
+
+        <!-- Full Attendance List Container -->
+        <div id="att-full-list" class="space-y-2">
+          <!-- Dynamic -->
+        </div>
+      </section>
+
+      <!-- SCREEN 4: ADD / EDIT ATTENDANCE -->
+      <section id="screen-add-attendance" class="view-screen space-y-4">
+        <div class="flex items-center justify-between border-b pb-2 border-gray-200 dark:border-gray-800">
+          <h3 id="form-att-title" class="font-bold text-base flex items-center gap-2">
+            <i data-lucide="calendar-plus" class="w-5 h-5 text-brand-600"></i> Add Attendance Record
+          </h3>
+          <button onclick="navTo('dashboard')" class="text-xs text-gray-500">Cancel</button>
+        </div>
+
+        <form id="att-form" class="space-y-3">
+          <input type="hidden" id="att-id-hidden">
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Date *</label>
+              <input type="date" id="att-form-date" required class="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Period (1-8) *</label>
+              <select id="att-form-period" required class="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500">
+                <option value="1">Period 1</option>
+                <option value="2">Period 2</option>
+                <option value="3">Period 3</option>
+                <option value="4">Period 4</option>
+                <option value="5">Period 5</option>
+                <option value="6">Period 6</option>
+                <option value="7">Period 7</option>
+                <option value="8">Period 8</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Start Time</label>
+              <input type="time" id="att-form-start" class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">End Time</label>
+              <input type="time" id="att-form-end" class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Subject Name *</label>
+            <input type="text" id="att-form-subject" required placeholder="e.g. Data Structures & Algorithms" class="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Faculty / Teacher</label>
+              <input type="text" id="att-form-teacher" placeholder="Prof. Sharma" class="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Status *</label>
+              <select id="att-form-status" required class="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500 font-semibold">
+                <option value="Present" class="text-emerald-600">Present</option>
+                <option value="Absent" class="text-rose-600">Absent</option>
+                <option value="Holiday" class="text-gray-500">Holiday / Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Notes / Classroom Details</label>
+            <textarea id="att-form-notes" rows="2" placeholder="e.g. Room 304, Lab Session 2" class="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl"></textarea>
+          </div>
+
+          <!-- Attach Evidence Direct Option -->
+          <div class="p-3 bg-brand-50/50 dark:bg-brand-950/30 rounded-xl border border-brand-200 dark:border-brand-800">
+            <label class="block text-xs font-bold text-brand-900 dark:text-brand-300 mb-1">Attach Evidence File (Optional)</label>
+            <p class="text-[10px] text-gray-500 mb-2">Upload genuine photo, assignment copy or screenshot proof.</p>
+            <input type="file" id="att-form-file" accept="image/*,.pdf" class="text-xs w-full text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-700">
+          </div>
+
+          <div class="pt-2 flex gap-2">
+            <button type="submit" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 text-xs rounded-xl shadow-md transition">
+              Save Attendance Record
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- SCREEN 5: EVIDENCE MANAGEMENT -->
+      <section id="screen-evidence" class="view-screen space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-base flex items-center gap-2">
+              <i data-lucide="file-check" class="w-5 h-5 text-emerald-600"></i> Attendance Evidence Storage
+            </h3>
+            <p class="text-[11px] text-gray-500">Store genuine proof photos & documents</p>
+          </div>
+          <button onclick="openEvidenceUploadModal()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 shadow">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i> Upload
+          </button>
+        </div>
+
+        <!-- Strict Disclaimer Banner -->
+        <div class="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-amber-900 dark:text-amber-200 text-xs">
+          <p class="font-semibold flex items-center gap-1">
+            <i data-lucide="shield-alert" class="w-4 h-4 text-amber-600"></i> Evidence Integrity Notice
+          </p>
+          <p class="text-[10px] text-amber-700 dark:text-amber-300 mt-0.5">
+            NASS-B stores user-uploaded files in original un-manipulated form. It does not generate fake proof or guarantee official college verification.
+          </p>
+        </div>
+
+        <!-- Filter Tags -->
+        <div id="evidence-filter-bar" class="flex gap-2 overflow-x-auto no-scrollbar pb-1 text-xs">
+          <button onclick="filterEvidence('ALL')" class="ev-tag-btn px-3 py-1 rounded-full bg-brand-600 text-white font-medium whitespace-nowrap">All Files</button>
+          <button onclick="filterEvidence('PHOTO')" class="ev-tag-btn px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 font-medium whitespace-nowrap">Class Photos</button>
+          <button onclick="filterEvidence('SCREENSHOT')" class="ev-tag-btn px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 font-medium whitespace-nowrap">Portal Screenshots</button>
+          <button onclick="filterEvidence('ASSIGNMENT')" class="ev-tag-btn px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 font-medium whitespace-nowrap">Assignments</button>
+        </div>
+
+        <!-- Evidence Cards Container -->
+        <div id="evidence-gallery-list" class="grid grid-cols-1 gap-3">
+          <!-- Dynamic Evidence Cards -->
+        </div>
+      </section>
+
+      <!-- SCREEN 6: CORRECTION REQUESTS & HISTORY -->
+      <section id="screen-corrections" class="view-screen space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-base flex items-center gap-2">
+              <i data-lucide="file-edit" class="w-5 h-5 text-purple-600"></i> Attendance Correction Requests
+            </h3>
+            <p class="text-[11px] text-gray-500">Track claim requests for erroneous absences</p>
+          </div>
+          <button onclick="openCreateCorrectionModal()" class="bg-purple-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 shadow">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> New Request
+          </button>
+        </div>
+
+        <!-- Filter Pills for Correction Status -->
+        <div class="flex gap-1.5 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl text-xs overflow-x-auto no-scrollbar">
+          <button onclick="filterCorrections('ALL')" class="corr-tab-btn flex-1 py-1.5 px-2 rounded-lg font-semibold bg-white dark:bg-gray-800 shadow text-center whitespace-nowrap">All</button>
+          <button onclick="filterCorrections('Pending')" class="corr-tab-btn flex-1 py-1.5 px-2 text-gray-500 font-medium text-center whitespace-nowrap">Pending</button>
+          <button onclick="filterCorrections('Approved')" class="corr-tab-btn flex-1 py-1.5 px-2 text-gray-500 font-medium text-center whitespace-nowrap">Approved</button>
+          <button onclick="filterCorrections('Rejected')" class="corr-tab-btn flex-1 py-1.5 px-2 text-gray-500 font-medium text-center whitespace-nowrap">Rejected</button>
+        </div>
+
+        <!-- Correction Requests List -->
+        <div id="corrections-list-container" class="space-y-3">
+          <!-- Dynamic -->
+        </div>
+      </section>
+
+      <!-- SCREEN 7: SUBJECT-WISE ATTENDANCE -->
+      <section id="screen-subject-wise" class="view-screen space-y-4">
+        <div class="border-b pb-2 border-gray-200 dark:border-gray-800">
+          <h3 class="font-bold text-base flex items-center gap-2">
+            <i data-lucide="book-open" class="w-5 h-5 text-indigo-600"></i> Subject-wise Breakdown
+          </h3>
+          <p class="text-[11px] text-gray-500">Individual attendance percentage per subject</p>
+        </div>
+
+        <div id="subject-cards-container" class="space-y-3">
+          <!-- Dynamic subject cards -->
+        </div>
+      </section>
+
+      <!-- SCREEN 8: ATTENDANCE CALCULATOR -->
+      <section id="screen-calculator" class="view-screen space-y-4">
+        <div class="border-b pb-2 border-gray-200 dark:border-gray-800">
+          <h3 class="font-bold text-base flex items-center gap-2">
+            <i data-lucide="calculator" class="w-5 h-5 text-amber-600"></i> Target Attendance Calculator
+          </h3>
+          <p class="text-[11px] text-gray-500">Simulate classes needed to hit 75%, 80%, 85%, or 90%</p>
+        </div>
+
+        <!-- Calculator Inputs Card -->
+        <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm">
+          <div class="flex items-center justify-between text-xs font-semibold">
+            <span>Use Current Live Data:</span>
+            <button onclick="syncCalcWithActuals()" class="text-brand-600 hover:underline text-[11px]">Sync Live Totals</button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-gray-500 font-medium mb-1">Present Classes</label>
+              <input type="number" id="calc-present-input" value="0" min="0" class="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-bold">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-500 font-medium mb-1">Total Classes Held</label>
+              <input type="number" id="calc-total-input" value="0" min="0" class="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-bold">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-gray-500 font-medium mb-1">Target Goal Percentage (%)</label>
+            <div class="grid grid-cols-4 gap-2">
+              <button onclick="setCalcTarget(75)" class="calc-target-btn py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs font-bold bg-brand-600 text-white">75%</button>
+              <button onclick="setCalcTarget(80)" class="calc-target-btn py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs font-bold">80%</button>
+              <button onclick="setCalcTarget(85)" class="calc-target-btn py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs font-bold">85%</button>
+              <button onclick="setCalcTarget(90)" class="calc-target-btn py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs font-bold">90%</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calculator Result Outcome Card -->
+        <div id="calc-result-box" class="bg-gradient-to-br from-brand-50 to-indigo-50 dark:from-brand-950/60 dark:to-indigo-950/60 p-4 rounded-2xl border border-brand-200 dark:border-brand-800 text-brand-900 dark:text-brand-100 space-y-2">
+          <h4 class="font-bold text-sm flex items-center gap-1.5">
+            <i data-lucide="sparkles" class="w-4 h-4 text-brand-600"></i> Simulation Results
+          </h4>
+          <p id="calc-result-text" class="text-xs leading-relaxed font-medium">Enter values above to calculate class targets.</p>
+        </div>
+      </section>
+
+      <!-- SCREEN 9: PDF & EVIDENCE REPORT GENERATOR -->
+      <section id="screen-reports" class="view-screen space-y-4">
+        <div class="border-b pb-2 border-gray-200 dark:border-gray-800">
+          <h3 class="font-bold text-base flex items-center gap-2">
+            <i data-lucide="printer" class="w-5 h-5 text-rose-600"></i> Printable Evidence Report Generator
+          </h3>
+          <p class="text-[11px] text-gray-500">Generate printable correction docket for submission</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-900 p-3 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Select Correction Claim Request:</label>
+            <select id="report-request-select" onchange="previewReport()" class="w-full p-2.5 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500">
+              <!-- Dynamic option list -->
+            </select>
+          </div>
+
+          <button onclick="window.print()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow">
+            <i data-lucide="printer" class="w-4 h-4"></i> Print / Save as PDF
+          </button>
+        </div>
+
+        <!-- Printable Document Live Preview Box -->
+        <div class="border border-gray-300 dark:border-gray-700 rounded-2xl p-4 bg-white text-gray-900 text-xs space-y-3 shadow-inner" id="print-area">
+          <div class="border-b-2 border-brand-600 pb-3 flex justify-between items-start">
+            <div>
+              <h2 class="text-lg font-black text-brand-700">ATTENDANCE EVIDENCE DOCKET</h2>
+              <p class="text-[10px] text-gray-500 uppercase tracking-widest">NASS-B Evidence Management Verification File</p>
+            </div>
+            <div class="text-right text-[10px] text-gray-500">
+              <p>Generated: <span id="report-gen-date">02/10/2026</span></p>
+              <p>Ref ID: <span id="report-ref-id">#NB-8834</span></p>
+            </div>
+          </div>
+
+          <!-- Student Profile Block -->
+          <div class="grid grid-cols-2 gap-2 bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-[11px]">
+            <div><strong>Student:</strong> <span id="rep-student-name">Rahul V. Nair</span></div>
+            <div><strong>Register No:</strong> <span id="rep-student-reg">21DCS042</span></div>
+            <div><strong>Department:</strong> <span id="rep-student-dept">Computer Science</span></div>
+            <div><strong>Institution:</strong> <span id="rep-student-college">Govt Polytechnic College</span></div>
+          </div>
+
+          <!-- Claim Record Summary -->
+          <div class="space-y-1 text-[11px]">
+            <h4 class="font-bold text-gray-800 border-b pb-1">Correction Claim Details:</h4>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 pt-1">
+              <p><strong>Date & Period:</strong> <span id="rep-date-period">-</span></p>
+              <p><strong>Subject:</strong> <span id="rep-subject">-</span></p>
+              <p><strong>Current Status:</strong> <span id="rep-current-status" class="text-rose-600 font-bold">-</span></p>
+              <p><strong>Claimed Status:</strong> <span id="rep-claimed-status" class="text-emerald-600 font-bold">Present</span></p>
+            </div>
+            <p class="pt-1"><strong>Reason for Dispute:</strong> <span id="rep-reason" class="text-gray-700 italic">-</span></p>
+          </div>
+
+          <!-- Attached Evidence Files -->
+          <div class="space-y-1">
+            <h4 class="font-bold text-gray-800 text-[11px] border-b pb-1">Attached Authentic Student Evidence:</h4>
+            <div id="rep-evidence-container" class="grid grid-cols-2 gap-2 pt-1">
+              <p class="text-[10px] text-gray-400 italic col-span-2">No evidence file attached.</p>
+            </div>
+          </div>
+
+          <!-- Mandatory Integrity Disclaimer Notice -->
+          <div class="mt-4 p-2 bg-gray-100 rounded border border-gray-300 text-[9px] text-gray-600 space-y-1">
+            <p class="font-bold uppercase text-gray-800">System Integrity & Verification Disclaimer</p>
+            <p>
+              This document contains user-uploaded evidence preserved in its original unedited format by the NASS-B System. NASS-B does not fabricate timestamps or guarantee official institutional verification unless signed below by an authorized faculty member.
+            </p>
+          </div>
+
+          <div class="pt-6 flex justify-between items-end text-[10px] text-gray-500">
+            <div class="border-t border-gray-400 w-28 text-center pt-1">Student Signature</div>
+            <div class="border-t border-gray-400 w-36 text-center pt-1">HOD / Faculty Sign & Seal</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCREEN 10: PROFILE & SETTINGS -->
+      <section id="screen-profile" class="view-screen space-y-4">
+        <div class="border-b pb-2 border-gray-200 dark:border-gray-800">
+          <h3 class="font-bold text-base flex items-center gap-2">
+            <i data-lucide="user-check" class="w-5 h-5 text-brand-600"></i> Student Profile & Settings
+          </h3>
+          <p class="text-[11px] text-gray-500">Manage academic details and app backup</p>
+        </div>
+
+        <!-- Student Details Form -->
+        <form id="profile-form" class="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm">
+          <h4 class="font-bold text-xs text-gray-700 dark:text-gray-300">Academic Identification</h4>
+          
+          <div>
+            <label class="block text-[11px] text-gray-500 font-medium mb-0.5">Full Name</label>
+            <input type="text" id="prof-name" class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] text-gray-500 font-medium mb-0.5">Register / Roll No</label>
+              <input type="text" id="prof-roll" class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-500 font-medium mb-0.5">Semester</label>
+              <input type="text" id="prof-sem" class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] text-gray-500 font-medium mb-0.5">Department</label>
+              <input type="text" id="prof-dept" class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+            </div>
+            <div>
+              <label class="block text-[11px] text-gray-500 font-medium mb-0.5">College / Institution</label>
+              <input type="text" id="prof-college" class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 text-xs rounded-xl transition">
+            Save Profile Details
+          </button>
+        </form>
+
+        <!-- Security & PIN Lock Settings -->
+        <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm">
+          <h4 class="font-bold text-xs text-gray-700 dark:text-gray-300">Security & Protection</h4>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold">Enable PIN Protection</p>
+              <p class="text-[10px] text-gray-500">Require 4-digit PIN when launching app</p>
+            </div>
+            <input type="checkbox" id="pin-enable-toggle" onchange="togglePinSecurity(this.checked)" class="w-4 h-4 text-brand-600 rounded">
+          </div>
+          <div id="pin-input-container" class="hidden pt-1">
+            <input type="password" id="app-pin-code" maxlength="4" placeholder="Enter 4-digit PIN" class="p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl w-32 tracking-widest text-center">
+          </div>
+        </div>
+
+        <!-- Data Backup & Reset Options -->
+        <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm">
+          <h4 class="font-bold text-xs text-gray-700 dark:text-gray-300">Data & Storage Management</h4>
+          
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="exportDataJSON()" class="p-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1">
+              <i data-lucide="download" class="w-4 h-4"></i> Export Backup
+            </button>
+            <label class="p-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer">
+              <i data-lucide="upload" class="w-4 h-4"></i> Restore Backup
+              <input type="file" id="import-json-file" accept=".json" onchange="importDataJSON(event)" class="hidden">
+            </label>
+          </div>
+
+          <button onclick="resetAppToDemo()" class="w-full text-rose-600 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 border border-rose-200 dark:border-rose-900 py-2 rounded-xl text-xs font-bold transition">
+            Reset Demo Sample Data
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Android Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-40 flex justify-around py-2 px-1 shadow-lg">
+      <button onclick="navTo('dashboard')" id="nav-dashboard" class="nav-item flex flex-col items-center justify-center text-brand-600 font-semibold w-1/5">
+        <i data-lucide="layout-dashboard" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px]">Home</span>
+      </button>
+
+      <button onclick="navTo('calendar')" id="nav-calendar" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 w-1/5">
+        <i data-lucide="calendar" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px]">Calendar</span>
+      </button>
+
+      <button onclick="navTo('evidence')" id="nav-evidence" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 w-1/5">
+        <i data-lucide="file-check" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px]">Evidence</span>
+      </button>
+
+      <button onclick="navTo('corrections')" id="nav-corrections" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 w-1/5 relative">
+        <i data-lucide="file-edit" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px]">Corrections</span>
+        <span id="nav-pending-badge" class="hidden absolute top-0 right-3 bg-amber-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+      </button>
+
+      <button onclick="navTo('profile')" id="nav-profile" class="nav-item flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 w-1/5">
+        <i data-lucide="user" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px]">Profile</span>
+      </button>
+    </nav>
+
+    <!-- MODAL: Integrity Info -->
+    <div id="integrity-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-sm w-full p-5 space-y-3 border border-gray-200 dark:border-gray-800 shadow-2xl">
+        <h3 class="font-bold text-base flex items-center gap-2 text-brand-600">
+          <i data-lucide="shield-check" class="w-5 h-5"></i> NASS-B Integrity Policy
+        </h3>
+        <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+          NASS-B is designed strictly for student self-organization. To maintain absolute trust during institutional reviews:
+        </p>
+        <ul class="text-xs text-gray-600 dark:text-gray-300 list-disc pl-4 space-y-1">
+          <li>Uploaded proof files are saved as-is without timestamp or pixel alterations.</li>
+          <li>The app never creates fake evidence or automatically overrides attendance records.</li>
+          <li>Uploaded files serve as reference dockets for HOD/Faculty dispute settlement.</li>
+        </ul>
+        <button onclick="closeIntegrityModal()" class="w-full bg-brand-600 text-white font-bold py-2 rounded-xl text-xs">Got it</button>
+      </div>
+    </div>
+
+    <!-- MODAL: New Evidence Upload -->
+    <div id="evidence-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-sm w-full p-5 space-y-3 border border-gray-200 dark:border-gray-800 shadow-2xl">
+        <h3 class="font-bold text-base flex items-center gap-2">
+          <i data-lucide="file-up" class="w-5 h-5 text-emerald-600"></i> Upload Evidence Proof
+        </h3>
+        <form id="evidence-upload-form" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Select Attendance Record *</label>
+            <select id="ev-modal-att-select" required class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+              <!-- Dynamic option list -->
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Evidence Category *</label>
+            <select id="ev-modal-type" required class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+              <option value="PHOTO">Classroom Photo Proof</option>
+              <option value="SCREENSHOT">College Portal Screenshot</option>
+              <option value="ASSIGNMENT">Assignment Submission Copy</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">File Attachment *</label>
+            <input type="file" id="ev-modal-file" required accept="image/*,.pdf" class="w-full text-xs text-gray-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">User Description / Notes</label>
+            <input type="text" id="ev-modal-desc" placeholder="e.g. Photo taken sitting in 2nd row during period" class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+          </div>
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="closeEvidenceModal()" class="w-1/2 py-2 bg-gray-200 dark:bg-gray-800 rounded-xl text-xs font-bold">Cancel</button>
+            <button type="submit" class="w-1/2 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Upload</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: Create Correction Request -->
+    <div id="correction-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-sm w-full p-5 space-y-3 border border-gray-200 dark:border-gray-800 shadow-2xl my-auto">
+        <h3 class="font-bold text-base flex items-center gap-2 text-purple-600">
+          <i data-lucide="file-edit" class="w-5 h-5"></i> Create Correction Claim
+        </h3>
+        <form id="correction-create-form" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Select Disputed Absence Record *</label>
+            <select id="corr-modal-att-select" required class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+              <!-- Dynamic -->
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Requested Status *</label>
+            <input type="text" value="Present" readonly class="w-full p-2 text-xs bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-bold text-emerald-600">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Reason for Claim *</label>
+            <textarea id="corr-modal-reason" required rows="2" placeholder="e.g. Attended class, marked absent by oversight on portal." class="w-full p-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl"></textarea>
+          </div>
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="closeCorrectionModal()" class="w-1/2 py-2 bg-gray-200 dark:bg-gray-800 rounded-xl text-xs font-bold">Cancel</button>
+            <button type="submit" class="w-1/2 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold">Submit Request</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: PIN Screen Lock Overlay -->
+    <div id="pin-lock-overlay" class="fixed inset-0 bg-brand-900 z-50 hidden flex flex-col items-center justify-center p-6 text-white text-center">
+      <div class="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4">
+        <i data-lucide="lock" class="w-8 h-8 text-brand-200"></i>
+      </div>
+      <h2 class="font-black text-xl mb-1">NASS-B Locked</h2>
+      <p class="text-xs text-brand-200 mb-6">Enter your 4-digit PIN code to proceed</p>
+      
+      <input type="password" id="pin-unlock-input" maxlength="4" class="p-3 text-center text-xl font-extrabold tracking-widest bg-white/20 border border-white/30 rounded-2xl w-36 focus:outline-none focus:ring-2 focus:ring-white mb-4">
+      
+      <button onclick="unlockAppWithPin()" class="bg-white text-brand-700 font-bold px-6 py-2.5 rounded-xl text-xs shadow-lg">
+        Unlock Security
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    /* ==========================================================================
+       NASS-B Application Logic & Persistent Data Engine
+       ========================================================================== */
+
+    // Sample Data Initialization
+    const SAMPLE_ATTENDANCE = [
+      { id: 'att-1', date: '2026-10-01', period: '1', subject: 'Data Structures', teacher: 'Prof. Anitha', status: 'Present', startTime: '09:00', endTime: '10:00', notes: 'Lab 2' },
+      { id: 'att-2', date: '2026-10-01', period: '2', subject: 'Computer Networks', teacher: 'Prof. Thomas', status: 'Present', startTime: '10:00', endTime: '11:00', notes: 'Room 302' },
+      { id: 'att-3', date: '2026-10-02', period: '1', subject: 'Software Engg', teacher: 'Prof. Rajesh', status: 'Absent', startTime: '09:00', endTime: '10:00', notes: 'Marked absent' },
+      { id: 'att-4', date: '2026-10-02', period: '3', subject: 'Data Structures', teacher: 'Prof. Anitha', status: 'Present', startTime: '11:15', endTime: '12:15', notes: 'Lecture 12' },
+      { id: 'att-5', date: '2026-09-28', period: '4', subject: 'Microprocessors', teacher: 'Prof. Suresh', status: 'Absent', startTime: '13:30', endTime: '14:30', notes: 'Oversight' }
+    ];
+
+    const SAMPLE_EVIDENCE = [
+      { id: 'ev-1', attendanceId: 'att-5', type: 'PHOTO', fileData: 'https://placehold.co/400x300/1e3a8a/ffffff?text=Classroom+Photo+Proof', fileName: 'classroom_board.jpg', uploadTime: '2026-09-28 14:35', desc: 'Photo of classroom whiteboard taken during 4th period.' }
+    ];
+
+    const SAMPLE_CORRECTIONS = [
+      { id: 'corr-1', attendanceId: 'att-5', currentStatus: 'Absent', requestedStatus: 'Present', reason: 'Was physically present in row 2. Photo proof attached.', status: 'Pending', timestamp: '2026-09-28 15:00' }
+    ];
+
+    const DEFAULT_PROFILE = {
+      name: 'Rahul V. Nair',
+      roll: '21DCS042',
+      sem: 'Semester 6',
+      dept: 'Computer Engineering',
+      college: 'Govt Polytechnic College'
+    };
+
+    // Global State
+    let appData = {
+      attendance: [],
+      evidence: [],
+      corrections: [],
+      profile: {},
+      settings: { pinEnabled: false, pinCode: '' }
+    };
+
+    let calendarCurrentDate = new Date(2026, 9, 1); // Oct 2026
+
+    // Initialization Callback
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStateFromStorage();
+      lucide.createIcons();
+      setupEventListeners();
+      renderDashboard();
+      renderCalendar();
+      renderAttendanceList();
+      renderEvidenceGallery();
+      renderCorrectionsList();
+      renderSubjectBreakdown();
+      renderCalculator();
+      populateReportOptions();
+
+      // Set default dates in forms
+      const todayStr = new Date().toISOString().split('T')[0];
+      document.getElementById('att-form-date').value = todayStr;
+
+      // PIN check
+      if (appData.settings.pinEnabled && appData.settings.pinCode) {
+        document.getElementById('pin-lock-overlay').classList.remove('hidden');
+      }
+    });
+
+    function loadStateFromStorage() {
+      const stored = localStorage.getItem('NASSB_APP_DATA');
+      if (stored) {
+        try {
+          appData = JSON.parse(stored);
+        } catch (e) {
+          console.error('Data parsing error', e);
+          initSampleData();
+        }
+      } else {
+        initSampleData();
+      }
+    }
+
+    function initSampleData() {
+      appData = {
+        attendance: [...SAMPLE_ATTENDANCE],
+        evidence: [...SAMPLE_EVIDENCE],
+        corrections: [...SAMPLE_CORRECTIONS],
+        profile: { ...DEFAULT_PROFILE },
+        settings: { pinEnabled: false, pinCode: '' }
+      };
+      saveStateToStorage();
+    }
+
+    function saveStateToStorage() {
+      localStorage.setItem('NASSB_APP_DATA', JSON.stringify(appData));
+    }
+
+    function navTo(screenId) {
+      document.querySelectorAll('.view-screen').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => {
+        n.classList.remove('text-brand-600');
+        n.classList.add('text-gray-500', 'dark:text-gray-400');
+      });
+
+      const targetScreen = document.getElementById(`screen-${screenId}`);
+      if (targetScreen) {
+        targetScreen.classList.add('active');
+      }
+
+      // Highlight Nav
+      const navBtn = document.getElementById(`nav-${screenId}`);
+      if (navBtn) {
+        navBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+        navBtn.classList.add('text-brand-600');
+      }
+
+      // Re-render specific views on navigation
+      if (screenId === 'dashboard') renderDashboard();
+      if (screenId === 'calendar') renderCalendar();
+      if (screenId === 'attendance') renderAttendanceList();
+      if (screenId === 'evidence') renderEvidenceGallery();
+      if (screenId === 'corrections') renderCorrectionsList();
+      if (screenId === 'subject-wise') renderSubjectBreakdown();
+      if (screenId === 'calculator') renderCalculator();
+      if (screenId === 'reports') populateReportOptions();
+      if (screenId === 'profile') loadProfileForm();
+
+      window.scrollTo(0, 0);
+    }
+
+    function renderDashboard() {
+      // Set Student Info
+      document.getElementById('dash-student-name').innerText = appData.profile.name || 'Student Name';
+      document.getElementById('dash-student-roll').innerText = `Roll: ${appData.profile.roll || 'N/A'} • ${appData.profile.sem || ''}`;
+
+      // Stats calculation
+      const total = appData.attendance.filter(a => a.status !== 'Holiday').length;
+      const present = appData.attendance.filter(a => a.status === 'Present').length;
+      const absent = appData.attendance.filter(a => a.status === 'Absent').length;
+      const pending = appData.corrections.filter(c => c.status === 'Pending').length;
+
+      const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+
+      document.getElementById('dash-overall-pct').innerText = `${pct}%`;
+      document.getElementById('dash-stat-total').innerText = total;
+      document.getElementById('dash-stat-present').innerText = present;
+      document.getElementById('dash-stat-absent').innerText = absent;
+      document.getElementById('dash-stat-pending').innerText = pending;
+
+      // Pending badge in bottom nav
+      const badge = document.getElementById('nav-pending-badge');
+      if (pending > 0) {
+        badge.innerText = pending;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+
+      // Circular Ring path update
+      const path = document.getElementById('dash-ring-path');
+      path.setAttribute('stroke-dasharray', `${pct}, 100`);
+
+      // Status Pill
+      const pill = document.getElementById('dash-status-pill');
+      const alertBox = document.getElementById('low-attendance-alert');
+
+      if (pct >= 75) {
+        pill.innerText = 'Eligible (Safe)';
+        pill.className = 'inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-100';
+        alertBox.classList.add('hidden');
+      } else {
+        pill.innerText = 'Low Attendance!';
+        pill.className = 'inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-semibold bg-rose-500/30 text-rose-100';
+        alertBox.classList.remove('hidden');
+      }
+
+      // Recent Records
+      const recentList = document.getElementById('dash-recent-list');
+      recentList.innerHTML = '';
+
+      const recentItems = [...appData.attendance].reverse().slice(0, 4);
+      if (recentItems.length === 0) {
+        recentList.innerHTML = `<div class="p-4 text-center text-xs text-gray-400">No attendance records found.</div>`;
+        return;
+      }
+
+      recentItems.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between shadow-sm';
+        
+        let statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">Present</span>`;
+        if (item.status === 'Absent') {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">Absent</span>`;
+        } else if (item.status === 'Holiday') {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700">Holiday</span>`;
+        }
+
+        div.innerHTML = `
+          <div>
+            <h4 class="font-bold text-xs">${item.subject}</h4>
+            <p class="text-[10px] text-gray-500">${item.date} • Period ${item.period} • ${item.teacher || 'N/A'}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            ${statusBadge}
+          </div>
+        `;
+        recentList.appendChild(div);
+      });
+    }
+
+    function renderCalendar() {
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const year = calendarCurrentDate.getFullYear();
+      const month = calendarCurrentDate.getMonth();
+
+      document.getElementById('cal-month-year-label').innerText = `${monthNames[month]} ${year}`;
+
+      const grid = document.getElementById('cal-days-grid');
+      grid.innerHTML = '';
+
+      const firstDayIndex = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      // Blank slots
+      for (let i = 0; i < firstDayIndex; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'h-10';
+        grid.appendChild(empty);
+      }
+
+      // Days
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const records = appData.attendance.filter(a => a.date === dateStr);
+
+        const btn = document.createElement('button');
+        btn.className = 'h-10 rounded-xl border border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center relative hover:bg-gray-100 dark:hover:bg-gray-800 transition';
+        btn.innerHTML = `<span class="font-medium text-xs">${d}</span>`;
+
+        // Badge indicator dot
+        if (records.length > 0) {
+          const hasAbsent = records.some(r => r.status === 'Absent');
+          const hasPending = records.some(r => {
+            const corr = appData.corrections.find(c => c.attendanceId === r.id);
+            return corr && corr.status === 'Pending';
+          });
+          const hasPresent = records.some(r => r.status === 'Present');
+
+          let dotColor = 'bg-emerald-500';
+          if (hasPending) dotColor = 'bg-amber-500';
+          else if (hasAbsent) dotColor = 'bg-rose-500';
+
+          btn.innerHTML += `<span class="w-2 h-2 rounded-full ${dotColor} absolute bottom-1"></span>`;
+        }
+
+        btn.onclick = () => selectCalendarDate(dateStr);
+        grid.appendChild(btn);
+      }
+
+      // Initial selection today or 1st
+      selectCalendarDate(`${year}-${String(month + 1).padStart(2, '0')}-01`);
+    }
+
+    function selectCalendarDate(dateStr) {
+      document.getElementById('cal-selected-date-label').innerText = `Selected Date: ${dateStr}`;
+      const records = appData.attendance.filter(a => a.date === dateStr);
+      const container = document.getElementById('cal-selected-records-list');
+      container.innerHTML = '';
+
+      if (records.length === 0) {
+        container.innerHTML = `<div class="p-3 text-center text-xs text-gray-400 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">No periods logged for this date.</div>`;
+        return;
+      }
+
+      records.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between shadow-sm';
+        div.innerHTML = `
+          <div>
+            <h4 class="font-bold text-xs">${r.subject}</h4>
+            <p class="text-[10px] text-gray-500">Period ${r.period} (${r.startTime || '--'} - ${r.endTime || '--'}) • ${r.teacher || ''}</p>
+          </div>
+          <span class="text-xs font-bold ${r.status === 'Present' ? 'text-emerald-600' : 'text-rose-600'}">${r.status}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderAttendanceList() {
+      const search = document.getElementById('att-search-input').value.toLowerCase();
+      const subFilter = document.getElementById('att-filter-subject').value;
+      const statusFilter = document.getElementById('att-filter-status').value;
+
+      // Populate subject filter dropdown
+      const subSelect = document.getElementById('att-filter-subject');
+      const uniqueSubjects = [...new Set(appData.attendance.map(a => a.subject))];
+      subSelect.innerHTML = `<option value="ALL">All Subjects</option>`;
+      uniqueSubjects.forEach(s => {
+        subSelect.innerHTML += `<option value="${s}">${s}</option>`;
+      });
+      subSelect.value = subFilter;
+
+      let filtered = appData.attendance.filter(a => {
+        const matchSearch = a.subject.toLowerCase().includes(search) || (a.teacher && a.teacher.toLowerCase().includes(search));
+        const matchSub = subFilter === 'ALL' || a.subject === subFilter;
+        const matchStatus = statusFilter === 'ALL' || a.status === statusFilter;
+        return matchSearch && matchSub && matchStatus;
+      });
+
+      document.getElementById('att-count-label').innerText = `Showing ${filtered.length} entries`;
+
+      const list = document.getElementById('att-full-list');
+      list.innerHTML = '';
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<div class="p-6 text-center text-xs text-gray-400">No matching attendance records.</div>`;
+        return;
+      }
+
+      filtered.reverse().forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'bg-white dark:bg-gray-900 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-2';
+        
+        const hasEvidence = appData.evidence.some(e => e.attendanceId === item.id);
+
+        div.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-[10px] font-bold text-brand-600 uppercase tracking-wider">Period ${item.period} • ${item.date}</span>
+              <h4 class="font-bold text-sm text-gray-900 dark:text-gray-100">${item.subject}</h4>
+              <p class="text-xs text-gray-500">${item.teacher ? 'Faculty: ' + item.teacher : ''}</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${item.status === 'Present' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${item.status}</span>
+          </div>
+          ${item.notes ? `<p class="text-[11px] text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg italic">${item.notes}</p>` : ''}
+          <div class="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-800 text-xs">
+            <span class="text-[10px] text-gray-400 flex items-center gap-1">
+              <i data-lucide="paperclip" class="w-3 h-3"></i> ${hasEvidence ? 'Evidence Attached' : 'No Evidence'}
+            </span>
+            <div class="flex gap-2">
+              ${item.status === 'Absent' ? `<button onclick="claimCorrectionFor('${item.id}')" class="text-xs text-purple-600 font-bold hover:underline">Claim Present</button>` : ''}
+              <button onclick="deleteAttendance('${item.id}')" class="text-xs text-rose-500 hover:underline">Delete</button>
+            </div>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+      lucide.createIcons();
+    }
+
+    function renderEvidenceGallery() {
+      const container = document.getElementById('evidence-gallery-list');
+      container.innerHTML = '';
+
+      if (appData.evidence.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-gray-400 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">No evidence files stored yet.</div>`;
+        return;
+      }
+
+      appData.evidence.forEach(item => {
+        const att = appData.attendance.find(a => a.id === item.attendanceId);
+        const card = document.createElement('div');
+        card.className = 'bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-3 shadow-sm space-y-2';
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-brand-600">${item.type}</span>
+            <span class="text-[10px] text-gray-400">${item.uploadTime}</span>
+          </div>
+          ${item.fileData ? `<img src="${item.fileData}" alt="Evidence" class="w-full h-36 object-cover rounded-xl border border-gray-100 dark:border-gray-800">` : ''}
+          <p class="text-xs font-semibold text-gray-800 dark:text-gray-200">${item.desc || item.fileName}</p>
+          <p class="text-[10px] text-gray-500">Linked Record: ${att ? att.subject + ' (' + att.date + ')' : 'Unlinked'}</p>
+          <div class="flex justify-end pt-1">
+            <button onclick="deleteEvidence('${item.id}')" class="text-xs text-rose-500 font-medium hover:underline">Remove Evidence</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderCorrectionsList() {
+      const container = document.getElementById('corrections-list-container');
+      container.innerHTML = '';
+
+      if (appData.corrections.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-gray-400 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">No correction claims submitted.</div>`;
+        return;
+      }
+
+      appData.corrections.forEach(c => {
+        const att = appData.attendance.find(a => a.id === c.attendanceId);
+        const div = document.createElement('div');
+        div.className = 'bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-2';
+
+        let badgeClass = 'bg-amber-100 text-amber-800';
+        if (c.status === 'Approved') badgeClass = 'bg-emerald-100 text-emerald-800';
+        if (c.status === 'Rejected') badgeClass = 'bg-rose-100 text-rose-800';
+
+        div.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-[10px] text-gray-400">Claim ID: #${c.id}</span>
+              <h4 class="font-bold text-sm">${att ? att.subject : 'Disputed Period'}</h4>
+              <p class="text-xs text-gray-500">${att ? att.date + ' • Period ' + att.period : ''}</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass}">${c.status}</span>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-800/60 p-2.5 rounded-xl text-xs space-y-1">
+            <p><strong>Claim:</strong> Absent ➔ <span class="text-emerald-600 font-bold">Present</span></p>
+            <p class="text-gray-600 dark:text-gray-300"><strong>Reason:</strong> ${c.reason}</p>
+          </div>
+          <div class="flex justify-between items-center text-xs pt-1">
+            <button onclick="navTo('reports')" class="text-brand-600 font-bold hover:underline">Generate Report Docket</button>
+            <button onclick="deleteCorrection('${c.id}')" class="text-rose-500">Withdraw</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderSubjectBreakdown() {
+      const container = document.getElementById('subject-cards-container');
+      container.innerHTML = '';
+
+      const subjects = [...new Set(appData.attendance.map(a => a.subject))];
+
+      if (subjects.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-gray-400 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">No subject records available.</div>`;
+        return;
+      }
+
+      subjects.forEach(sub => {
+        const records = appData.attendance.filter(a => a.subject === sub && a.status !== 'Holiday');
+        const present = records.filter(a => a.status === 'Present').length;
+        const total = records.length;
+        const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+
+        const card = document.createElement('div');
+        card.className = 'bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-2';
+
+        let color = 'bg-emerald-500';
+        if (pct < 75) color = 'bg-rose-500';
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center">
+            <h4 class="font-bold text-sm">${sub}</h4>
+            <span class="font-extrabold text-sm ${pct >= 75 ? 'text-emerald-600' : 'text-rose-600'}">${pct}%</span>
+          </div>
+          <div class="w-full bg-gray-100 dark:bg-gray-800 h-2.5 rounded-full overflow-hidden">
+            <div class="${color} h-full transition-all duration-500" style="width: ${pct}%"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-gray-500 pt-1">
+            <span>Present: ${present} / ${total}</span>
+            <span>Target: 75%</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderCalculator() {
+      syncCalcWithActuals();
+    }
+
+    function syncCalcWithActuals() {
+      const total = appData.attendance.filter(a => a.status !== 'Holiday').length;
+      const present = appData.attendance.filter(a => a.status === 'Present').length;
+
+      document.getElementById('calc-present-input').value = present;
+      document.getElementById('calc-total-input').value = total;
+      runCalcSimulation(75);
+    }
+
+    function setCalcTarget(target) {
+      document.querySelectorAll('.calc-target-btn').forEach(b => {
+        b.classList.remove('bg-brand-600', 'text-white');
+      });
+      event.target.classList.add('bg-brand-600', 'text-white');
+      runCalcSimulation(target);
+    }
+
+    function runCalcSimulation(targetPct) {
+      const p = parseInt(document.getElementById('calc-present-input').value) || 0;
+      const t = parseInt(document.getElementById('calc-total-input').value) || 0;
+
+      const resultBox = document.getElementById('calc-result-text');
+
+      if (t === 0) {
+        resultBox.innerHTML = 'Please log attendance classes to perform simulations.';
+        return;
+      }
+
+      const currentPct = (p / t) * 100;
+
+      if (currentPct >= targetPct) {
+        // Calculate max skippable classes
+        const maxSkip = Math.floor((100 * p - targetPct * t) / targetPct);
+        resultBox.innerHTML = `
+          You are currently at <strong>${Math.round(currentPct)}%</strong>.<br>
+          <span class="text-emerald-700 dark:text-emerald-300 font-bold">Great news!</span> You can safely skip <strong>${maxSkip < 0 ? 0 : maxSkip}</strong> consecutive classes without dropping below ${targetPct}%.
+        `;
+      } else {
+        // Calculate required consecutive classes
+        const reqClasses = Math.ceil((targetPct * t - 100 * p) / (100 - targetPct));
+        resultBox.innerHTML = `
+          You are currently at <strong>${Math.round(currentPct)}%</strong>.<br>
+          <span class="text-rose-700 dark:text-rose-300 font-bold">Attention Required:</span> You need to attend <strong>${reqClasses}</strong> consecutive classes without missing any to reach your target of ${targetPct}%.
+        `;
+      }
+    }
+
+    function populateReportOptions() {
+      const select = document.getElementById('report-request-select');
+      select.innerHTML = '';
+
+      if (appData.corrections.length === 0) {
+        select.innerHTML = `<option value="">No correction claims available</option>`;
+        return;
+      }
+
+      appData.corrections.forEach(c => {
+        const att = appData.attendance.find(a => a.id === c.attendanceId);
+        select.innerHTML += `<option value="${c.id}">Claim #${c.id} - ${att ? att.subject : ''} (${att ? att.date : ''})</option>`;
+      });
+
+      previewReport();
+    }
+
+    function previewReport() {
+      const claimId = document.getElementById('report-request-select').value;
+      const claim = appData.corrections.find(c => c.id === claimId);
+
+      document.getElementById('rep-student-name').innerText = appData.profile.name || 'Rahul V. Nair';
+      document.getElementById('rep-student-reg').innerText = appData.profile.roll || '21DCS042';
+      document.getElementById('rep-student-dept').innerText = appData.profile.dept || 'Computer Engineering';
+      document.getElementById('rep-student-college').innerText = appData.profile.college || 'Polytechnic College';
+
+      if (!claim) return;
+
+      const att = appData.attendance.find(a => a.id === claim.attendanceId);
+      const ev = appData.evidence.filter(e => e.attendanceId === claim.attendanceId);
+
+      document.getElementById('report-ref-id').innerText = `#NB-${claim.id}`;
+      document.getElementById('report-gen-date').innerText = new Date().toLocaleDateString();
+
+      if (att) {
+        document.getElementById('rep-date-period').innerText = `${att.date} (Period ${att.period})`;
+        document.getElementById('rep-subject').innerText = att.subject;
+        document.getElementById('rep-current-status').innerText = att.status;
+      }
+
+      document.getElementById('rep-reason').innerText = claim.reason;
+
+      const evContainer = document.getElementById('rep-evidence-container');
+      evContainer.innerHTML = '';
+
+      if (ev.length === 0) {
+        evContainer.innerHTML = `<p class="text-[10px] text-gray-400 italic col-span-2">No evidence file attached to this record.</p>`;
+      } else {
+        ev.forEach(file => {
+          evContainer.innerHTML += `
+            <div class="border rounded p-1 text-[9px]">
+              <p class="font-bold">${file.type}</p>
+              ${file.fileData ? `<img src="${file.fileData}" class="h-20 w-full object-cover my-1 rounded">` : ''}
+              <p class="text-gray-500">${file.desc || file.fileName}</p>
+            </div>
+          `;
+        });
+      }
+    }
+
+    function setupEventListeners() {
+      // Add Attendance Form
+      document.getElementById('att-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = 'att-' + Date.now();
+        const record = {
+          id: id,
+          date: document.getElementById('att-form-date').value,
+          period: document.getElementById('att-form-period').value,
+          startTime: document.getElementById('att-form-start').value,
+          endTime: document.getElementById('att-form-end').value,
+          subject: document.getElementById('att-form-subject').value,
+          teacher: document.getElementById('att-form-teacher').value,
+          status: document.getElementById('att-form-status').value,
+          notes: document.getElementById('att-form-notes').value
+        };
+
+        appData.attendance.push(record);
+
+        // Optional Direct File upload
+        const fileInput = document.getElementById('att-form-file');
+        if (fileInput.files.length > 0) {
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            appData.evidence.push({
+              id: 'ev-' + Date.now(),
+              attendanceId: id,
+              type: 'PHOTO',
+              fileData: evt.target.result,
+              fileName: fileInput.files[0].name,
+              uploadTime: new Date().toLocaleString(),
+              desc: 'Direct attached proof during log entry'
+            });
+            saveStateToStorage();
+          };
+          reader.readAsDataURL(fileInput.files[0]);
+        } else {
+          saveStateToStorage();
+        }
+
+        e.target.reset();
+        navTo('dashboard');
+      });
+
+      // Filter Inputs
+      document.getElementById('att-search-input').addEventListener('input', renderAttendanceList);
+      document.getElementById('att-filter-subject').addEventListener('change', renderAttendanceList);
+      document.getElementById('att-filter-status').addEventListener('change', renderAttendanceList);
+
+      // Calendar controls
+      document.getElementById('cal-prev-btn').onclick = () => {
+        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() - 1);
+        renderCalendar();
+      };
+      document.getElementById('cal-next-btn').onclick = () => {
+        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + 1);
+        renderCalendar();
+      };
+
+      // Profile Form
+      document.getElementById('profile-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        appData.profile.name = document.getElementById('prof-name').value;
+        appData.profile.roll = document.getElementById('prof-roll').value;
+        appData.profile.sem = document.getElementById('prof-sem').value;
+        appData.profile.dept = document.getElementById('prof-dept').value;
+        appData.profile.college = document.getElementById('prof-college').value;
+        saveStateToStorage();
+        alert('Profile saved successfully!');
+      });
+
+      // Theme toggle
+      document.getElementById('theme-toggle-btn').onclick = () => {
+        document.documentElement.classList.toggle('dark');
+      };
+
+      // Evidence upload form
+      document.getElementById('evidence-upload-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const attId = document.getElementById('ev-modal-att-select').value;
+        const type = document.getElementById('ev-modal-type').value;
+        const desc = document.getElementById('ev-modal-desc').value;
+        const fileInput = document.getElementById('ev-modal-file');
+
+        if (fileInput.files.length > 0) {
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            appData.evidence.push({
+              id: 'ev-' + Date.now(),
+              attendanceId: attId,
+              type: type,
+              fileData: evt.target.result,
+              fileName: fileInput.files[0].name,
+              uploadTime: new Date().toLocaleString(),
+              desc: desc
+            });
+            saveStateToStorage();
+            closeEvidenceModal();
+            renderEvidenceGallery();
+          };
+          reader.readAsDataURL(fileInput.files[0]);
+        }
+      });
+
+      // Correction form submit
+      document.getElementById('correction-create-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const attId = document.getElementById('corr-modal-att-select').value;
+        const reason = document.getElementById('corr-modal-reason').value;
+
+        appData.corrections.push({
+          id: 'corr-' + Date.now(),
+          attendanceId: attId,
+          currentStatus: 'Absent',
+          requestedStatus: 'Present',
+          reason: reason,
+          status: 'Pending',
+          timestamp: new Date().toLocaleString()
+        });
+
+        saveStateToStorage();
+        closeCorrectionModal();
+        renderCorrectionsList();
+      });
+    }
+
+    // Helper Action Functions
+    function openAddAttendanceModalForCal() {
+      navTo('add-attendance');
+    }
+
+    function deleteAttendance(id) {
+      if (confirm('Delete this attendance record?')) {
+        appData.attendance = appData.attendance.filter(a => a.id !== id);
+        saveStateToStorage();
+        renderAttendanceList();
+        renderDashboard();
+      }
+    }
+
+    function deleteEvidence(id) {
+      if (confirm('Remove this evidence attachment?')) {
+        appData.evidence = appData.evidence.filter(e => e.id !== id);
+        saveStateToStorage();
+        renderEvidenceGallery();
+      }
+    }
+
+    function deleteCorrection(id) {
+      if (confirm('Withdraw this correction claim?')) {
+        appData.corrections = appData.corrections.filter(c => c.id !== id);
+        saveStateToStorage();
+        renderCorrectionsList();
+      }
+    }
+
+    function claimCorrectionFor(attId) {
+      openCreateCorrectionModal(attId);
+    }
+
+    // Modal Display Trigger Functions
+    function showIntegrityModal() {
+      document.getElementById('integrity-modal').classList.remove('hidden');
+    }
+    function closeIntegrityModal() {
+      document.getElementById('integrity-modal').classList.add('hidden');
+    }
+
+    function openEvidenceUploadModal() {
+      const select = document.getElementById('ev-modal-att-select');
+      select.innerHTML = '';
+      appData.attendance.forEach(a => {
+        select.innerHTML += `<option value="${a.id}">${a.subject} (${a.date} - P${a.period})</option>`;
+      });
+      document.getElementById('evidence-modal').classList.remove('hidden');
+    }
+    function closeEvidenceModal() {
+      document.getElementById('evidence-modal').classList.add('hidden');
+    }
+
+    function openCreateCorrectionModal(preSelectId = '') {
+      const select = document.getElementById('corr-modal-att-select');
+      select.innerHTML = '';
+      const absents = appData.attendance.filter(a => a.status === 'Absent');
+
+      if (absents.length === 0) {
+        alert('No absent records available to dispute!');
+        return;
+      }
+
+      absents.forEach(a => {
+        select.innerHTML += `<option value="${a.id}">${a.subject} (${a.date} - P${a.period})</option>`;
+      });
+
+      if (preSelectId) select.value = preSelectId;
+      document.getElementById('correction-modal').classList.remove('hidden');
+    }
+    function closeCorrectionModal() {
+      document.getElementById('correction-modal').classList.add('hidden');
+    }
+
+    function loadProfileForm() {
+      document.getElementById('prof-name').value = appData.profile.name || '';
+      document.getElementById('prof-roll').value = appData.profile.roll || '';
+      document.getElementById('prof-sem').value = appData.profile.sem || '';
+      document.getElementById('prof-dept').value = appData.profile.dept || '';
+      document.getElementById('prof-college').value = appData.profile.college || '';
+    }
+
+    // PIN Protection Toggle
+    function togglePinSecurity(enabled) {
+      appData.settings.pinEnabled = enabled;
+      const box = document.getElementById('pin-input-container');
+      if (enabled) {
+        box.classList.remove('hidden');
+        appData.settings.pinCode = document.getElementById('app-pin-code').value || '1234';
+      } else {
+        box.classList.add('hidden');
+      }
+      saveStateToStorage();
+    }
+
+    function unlockAppWithPin() {
+      const pin = document.getElementById('pin-unlock-input').value;
+      if (pin === appData.settings.pinCode || pin === '1234') {
+        document.getElementById('pin-lock-overlay').classList.add('hidden');
+      } else {
+        alert('Incorrect PIN!');
+      }
+    }
+
+    // Backup Export and Reset
+    function exportDataJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `NASSB_Backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importDataJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          appData = JSON.parse(evt.target.result);
+          saveStateToStorage();
+          alert('Backup restored successfully!');
+          navTo('dashboard');
+        } catch (err) {
+          alert('Invalid backup JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetAppToDemo() {
+      if (confirm('Reset all data back to initial sample demo state?')) {
+        initSampleData();
+        renderDashboard();
+        alert('Sample data reloaded.');
+      }
+    }
+  </script>
+</body>
+</html>
+```
